@@ -1,31 +1,66 @@
-import { useEffect } from "react"
-import { Form, Input, Button, Typography, Space, Card } from "antd"
-import { useStorage } from "@plasmohq/storage/hook"
+import { useEffect, useState } from "react"
+import { Form, Input, Button, Typography, Space, Card, message } from "antd"
 import "./style.css"
 
 const { TextArea } = Input
 const { Title } = Typography
 
 const Options = () => {
-  const [proxyConfig, setProxyConfig] = useStorage("proxyConfig", {
-    host: "127.0.0.1",
-    port: "8998"
-  })
-  const [bypassList, setBypassList] = useStorage("bypassList", [
-    "localhost",
-    "127.0.0.1"
-  ])
+  const [form] = Form.useForm()
 
-  const onProxyConfigSubmit = (values) => {
-    setProxyConfig({
-      host: values.host,
-      port: values.port
+  // Load saved settings on component mount
+  useEffect(() => {
+    chrome.storage.local.get(["proxyConfig", "bypassList"]).then((result) => {
+      const formValues = {
+        host: result.proxyConfig?.host || "127.0.0.1",
+        port: result.proxyConfig?.port || "8998",
+        bypassList: result.bypassList?.join("\n") || "127.0.0.1"
+      }
+      form.setFieldsValue(formValues)
     })
-  }
+  }, [])
 
-  const onBypassListChange = (e) => {
-    const lines = e.target.value.split("\n").filter(line => line.trim() !== "")
-    setBypassList(lines)
+  const onFormSubmit = async (values) => {
+    try {
+      const newConfig = {
+        host: values.host,
+        port: values.port
+      }
+      
+      const bypassList = values.bypassList
+        .split("\n")
+        .map(line => line.trim())
+        .filter(line => line !== "")
+
+      // Save both proxy config and bypass list
+      await chrome.storage.local.set({ 
+        proxyConfig: newConfig,
+        bypassList: bypassList
+      })
+
+      // Update Chrome proxy settings if enabled
+      const { proxyEnabled } = await chrome.storage.local.get("proxyEnabled")
+      if (proxyEnabled) {
+        await chrome.proxy.settings.set({
+          value: {
+            mode: "fixed_servers",
+            rules: {
+              singleProxy: {
+                scheme: "http",
+                host: values.host,
+                port: parseInt(values.port)
+              },
+              bypassList: bypassList
+            }
+          },
+          scope: "regular"
+        })
+      }
+
+      message.success("Settings saved successfully")
+    } catch (error) {
+      message.error("Failed to save settings")
+    }
   }
 
   return (
@@ -33,11 +68,16 @@ const Options = () => {
       <Space direction="vertical" style={{ width: "100%" }} size="large">
         <Title level={2}>Proxy Settings</Title>
         
-        <Card title="Proxy Configuration">
-          <Form
-            initialValues={proxyConfig}
-            onFinish={onProxyConfigSubmit}
-            layout="vertical">
+        <Form
+          form={form}
+          onFinish={onFormSubmit}
+          layout="vertical"
+          initialValues={{
+            host: "127.0.0.1",
+            port: "8998",
+            bypassList: "127.0.0.1"
+          }}>
+          <Card title="Proxy Configuration" style={{ marginBottom: 16 }}>
             <Form.Item
               label="Proxy Host"
               name="host"
@@ -51,28 +91,41 @@ const Options = () => {
               rules={[{ required: true, message: "Please input proxy port!" }]}>
               <Input placeholder="8998" />
             </Form.Item>
+          </Card>
 
-            <Form.Item>
-              <Button type="primary" htmlType="submit">
-                Save Proxy Configuration
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
+          <Card title="Proxy Bypass List" style={{ marginBottom: 16 }}>
+            <Space direction="vertical" style={{ width: "100%" }}>
+              <Typography.Text>
+                Enter one URL pattern per line. The proxy will not be used for addresses that match these patterns.
+                <br />
+                <a 
+                  href="https://developer.chrome.com/extensions/proxy#bypass_list"
+                  target="_blank"
+                >
+                  Learn more about bypass patterns
+                </a>
+              </Typography.Text>
+              <Form.Item
+                name="bypassList"
+                rules={[{ required: true, message: "Please input bypass list!" }]}>
+                <TextArea
+                  placeholder="Example:
+localhost
+127.0.0.1
+*.example.com"
+                  style={{ fontFamily: "monospace" }}
+                  autoSize={{ minRows: 4, maxRows: 8 }}
+                />
+              </Form.Item>
+            </Space>
+          </Card>
 
-        <Card title="Proxy Bypass List">
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <Typography.Text>
-              Enter one URL pattern per line. The proxy will not be used for addresses that match these patterns.
-            </Typography.Text>
-            <TextArea
-              rows={10}
-              value={bypassList.join("\n")}
-              onChange={onBypassListChange}
-              placeholder="Enter URL patterns to bypass proxy&#10;Example:&#10;localhost&#10;127.0.0.1&#10;*.example.com"
-            />
-          </Space>
-        </Card>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" size="large">
+              Save All Settings
+            </Button>
+          </Form.Item>
+        </Form>
       </Space>
     </div>
   )

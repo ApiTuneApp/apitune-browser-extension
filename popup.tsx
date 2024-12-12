@@ -1,30 +1,31 @@
 import { useEffect, useState } from "react"
 import { Button, Space, Typography, Switch, Card, Divider } from "antd"
-import { useStorage } from "@plasmohq/storage/hook"
 import { SettingOutlined } from "@ant-design/icons"
 import "./style.css"
 
 const { Text, Title } = Typography
 
 const Popup = () => {
-  const [proxyEnabled, setProxyEnabled] = useStorage("proxyEnabled", false)
-  const [proxyConfig, setProxyConfig] = useStorage("proxyConfig", {
+  const [proxyEnabled, setProxyEnabled] = useState(false)
+  const [proxyConfig, setProxyConfig] = useState({
     host: "127.0.0.1",
     port: "8998"
   })
-  const [bypassList, setBypassList] = useStorage("bypassList", [
-    "localhost",
-    "127.0.0.1"
-  ])
+  const [bypassList, setBypassList] = useState(["127.0.0.1"])
 
+  // Load saved settings on component mount
   useEffect(() => {
-    chrome.proxy.settings.set({
-      value: {
-        mode: "direct"
-      },
-      scope: "regular"
+    chrome.storage.local.get(["proxyEnabled", "proxyConfig", "bypassList"]).then((result) => {
+      if (result.proxyEnabled !== undefined) {
+        setProxyEnabled(result.proxyEnabled)
+      }
+      if (result.proxyConfig) {
+        setProxyConfig(result.proxyConfig)
+      }
+      if (result.bypassList) {
+        setBypassList(result.bypassList)
+      }
     })
-    setProxyEnabled(false)
   }, [])
 
   const toggleProxy = async () => {
@@ -54,6 +55,7 @@ const Popup = () => {
       })
     }
     
+    await chrome.storage.local.set({ proxyEnabled: newState })
     setProxyEnabled(newState)
   }
 
