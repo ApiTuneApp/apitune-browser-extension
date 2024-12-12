@@ -1,0 +1,21 @@
+@import 'antd/dist/reset.css';
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: transparent !important;
+}
+
+/* Custom styles for the popup */
+.ant-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+}
+
+.ant-switch {
+  min-width: 44px;
+}
+
+.ant-divider {
+  border-color: #f0f0f0;
+} 
