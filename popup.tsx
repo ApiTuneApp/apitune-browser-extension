@@ -7,23 +7,30 @@ const { Text, Title } = Typography
 
 const Popup = () => {
   const [proxyEnabled, setProxyEnabled] = useState(false)
-  const [proxyConfig, setProxyConfig] = useState({
+  const [profiles, setProfiles] = useState([])
+  const [currentProfileId, setCurrentProfileId] = useState("")
+  const [currentProfile, setCurrentProfile] = useState({
     host: "127.0.0.1",
-    port: "8998"
+    port: "8998",
+    bypassList: ["127.0.0.1"]
   })
-  const [bypassList, setBypassList] = useState(["127.0.0.1"])
 
   // Load saved settings on component mount
   useEffect(() => {
-    chrome.storage.local.get(["proxyEnabled", "proxyConfig", "bypassList"]).then((result) => {
+    chrome.storage.local.get(["proxyEnabled", "proxyProfiles", "currentProfileId"]).then((result) => {
       if (result.proxyEnabled !== undefined) {
         setProxyEnabled(result.proxyEnabled)
       }
-      if (result.proxyConfig) {
-        setProxyConfig(result.proxyConfig)
-      }
-      if (result.bypassList) {
-        setBypassList(result.bypassList)
+      if (result.proxyProfiles) {
+        setProfiles(result.proxyProfiles)
+        
+        const profileId = result.currentProfileId || result.proxyProfiles[0]?.id
+        setCurrentProfileId(profileId)
+        
+        const profile = result.proxyProfiles.find(p => p.id === profileId)
+        if (profile) {
+          setCurrentProfile(profile)
+        }
       }
     })
   }, [])
@@ -38,10 +45,10 @@ const Popup = () => {
           rules: {
             singleProxy: {
               scheme: "http",
-              host: proxyConfig.host,
-              port: parseInt(proxyConfig.port)
+              host: currentProfile.host,
+              port: parseInt(currentProfile.port)
             },
-            bypassList: bypassList
+            bypassList: currentProfile.bypassList
           }
         },
         scope: "regular"
@@ -87,7 +94,7 @@ const Popup = () => {
             alignItems: "center"
           }}>
             <Text style={{ fontSize: "13px" }}>
-              {proxyConfig.host}:{proxyConfig.port}
+              {currentProfile.host}:{currentProfile.port}
             </Text>
             <Button
               type="text"
