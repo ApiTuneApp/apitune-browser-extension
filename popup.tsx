@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react"
-import { Button, Space, Typography, Switch, Card, Divider } from "antd"
+import { Button, Space, Typography, Switch, Card, Divider, Select } from "antd"
 import { SettingOutlined } from "@ant-design/icons"
 import "./style.css"
 
 const { Text, Title } = Typography
+const { Option } = Select
 
 const Popup = () => {
   const [proxyEnabled, setProxyEnabled] = useState(false)
   const [profiles, setProfiles] = useState([])
   const [currentProfileId, setCurrentProfileId] = useState("")
   const [currentProfile, setCurrentProfile] = useState({
+    name: "Default",
     host: "127.0.0.1",
     port: "8998",
     bypassList: ["127.0.0.1"]
@@ -34,6 +36,33 @@ const Popup = () => {
       }
     })
   }, [])
+
+  const onProfileChange = async (profileId: string) => {
+    const profile = profiles.find(p => p.id === profileId)
+    if (profile) {
+      setCurrentProfile(profile)
+      setCurrentProfileId(profileId)
+      await chrome.storage.local.set({ currentProfileId: profileId })
+
+      // Update proxy settings if enabled
+      if (proxyEnabled) {
+        await chrome.proxy.settings.set({
+          value: {
+            mode: "fixed_servers",
+            rules: {
+              singleProxy: {
+                scheme: "http",
+                host: profile.host,
+                port: parseInt(profile.port)
+              },
+              bypassList: profile.bypassList
+            }
+          },
+          scope: "regular"
+        })
+      }
+    }
+  }
 
   const toggleProxy = async () => {
     const newState = !proxyEnabled
@@ -74,7 +103,7 @@ const Popup = () => {
       >
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Title level={4} style={{ margin: 0 }}>ApiTune Proxy Switch</Title>
+            <Title level={4} style={{ margin: 0 }}>ApiTune Proxy</Title>
             <Switch
               checked={proxyEnabled}
               onChange={toggleProxy}
@@ -85,26 +114,38 @@ const Popup = () => {
           
           <Divider style={{ margin: "8px 0" }} />
           
-          <div style={{ 
-            padding: "8px 12px",
-            background: "#f5f5f5",
-            borderRadius: "6px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
-            <Text style={{ fontSize: "13px" }}>
-              {currentProfile.host}:{currentProfile.port}
-            </Text>
-            <Button
-              type="text"
-              icon={<SettingOutlined />}
-              size="small"
-              onClick={() => {
-                chrome.runtime.openOptionsPage()
-              }}
+          <Space direction="vertical" style={{ width: "100%" }} size="small">
+            <Select
+              style={{ width: "100%" }}
+              value={currentProfileId}
+              onChange={onProfileChange}
+              options={profiles.map(profile => ({
+                label: profile.name,
+                value: profile.id
+              }))}
             />
-          </div>
+            
+            <div style={{ 
+              padding: "8px 12px",
+              background: "#f5f5f5",
+              borderRadius: "6px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <Text style={{ fontSize: "13px" }}>
+                {currentProfile.host}:{currentProfile.port}
+              </Text>
+              <Button
+                type="text"
+                icon={<SettingOutlined />}
+                size="small"
+                onClick={() => {
+                  chrome.runtime.openOptionsPage()
+                }}
+              />
+            </div>
+          </Space>
         </Space>
       </Card>
     </div>
