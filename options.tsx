@@ -125,20 +125,32 @@ const Options = () => {
       // Update Chrome proxy settings if enabled
       const { proxyEnabled } = await chrome.storage.local.get("proxyEnabled")
       if (proxyEnabled) {
-        await chrome.proxy.settings.set({
-          value: {
-            mode: "fixed_servers",
-            rules: {
-              singleProxy: {
-                scheme: "http",
-                host: values.host,
-                port: parseInt(values.port)
-              },
-              bypassList
-            }
-          },
-          scope: "regular"
-        })
+        try {
+          const config = {
+            value: {
+              mode: "fixed_servers",
+              rules: {
+                singleProxy: {
+                  scheme: "http",
+                  host: values.host,
+                  port: parseInt(values.port)
+                },
+                bypassList
+              }
+            },
+            scope: "regular"
+          } as chrome.types.ChromeSettingSetDetails;
+          
+          await chrome.proxy.settings.clear({});  // Clear existing settings first
+          await chrome.proxy.settings.set(config);
+          
+          // Verify the settings were applied
+          // const settings = await chrome.proxy.settings.get({});
+          // console.log('Current proxy settings:', settings);
+        } catch (error) {
+          console.error('Proxy settings error:', error);
+          message.error('Failed to apply proxy settings');
+        }
       }
 
       message.success("Profile saved successfully")
