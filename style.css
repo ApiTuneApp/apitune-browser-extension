@@ -14,8 +14,17 @@ body {
 
 .ant-switch {
   min-width: 44px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.ant-switch.ant-switch-checked {
+  background: #118DFF;
 }
 
 .ant-divider {
   border-color: #f0f0f0;
+}
+
+.ant-tooltip {
+  font-size: 12px;
 } 

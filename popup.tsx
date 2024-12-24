@@ -1,5 +1,7 @@
+import Logo from "data-base64:~assets/logo.svg"
+
 import { useEffect, useState } from "react"
-import { Button, Space, Typography, Switch, Card, Divider, Select } from "antd"
+import { Button, Space, Typography, Switch, Card, Divider, Select, Tooltip } from "antd"
 import { SettingOutlined } from "@ant-design/icons"
 import "./style.css"
 
@@ -103,13 +105,32 @@ const Popup = () => {
       >
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Title level={4} style={{ margin: 0 }}>ApiTune Proxy</Title>
-            <Switch
-              checked={proxyEnabled}
-              onChange={toggleProxy}
-              checkedChildren="ON"
-              unCheckedChildren="OFF"
-            />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <img src={Logo} alt="ApiTune Logo" style={{ width: 20, height: 20 }} />
+              <Title 
+                level={5} 
+                style={{ 
+                  margin: 0,
+                  fontWeight: 600
+                }}
+              >
+                ApiTune Proxy
+              </Title>
+            </div>
+            <Tooltip 
+              title={proxyEnabled ? 
+                "Click to disable proxy server" : 
+                "Enable proxy server to route traffic through selected profile"
+              }
+              placement="bottom"
+            >
+              <Switch
+                checked={proxyEnabled}
+                onChange={toggleProxy}
+                checkedChildren="ON"
+                unCheckedChildren="OFF"
+              />
+            </Tooltip>
           </div>
           
           <Divider style={{ margin: "8px 0" }} />
